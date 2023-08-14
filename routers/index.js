@@ -2,10 +2,19 @@ const express = require("express");
 const router = express.Router();
 const Book = require("../store/Book");
 const fileMulter = require("../middleware/file");
+// REDIS
+const redis = require("redis");
+const REDIS_URL = process.env.REDIS_URL || "localhost";
+const client = redis.createClient({ url: REDIS_URL });
 
+(async () => {
+  await client.connect();
+})();
+
+// STORE
 const store = {
   // для начала добавим 2 объекта книги
-  books: [new Book('1',"Название книги 1"), new Book('2',"Название книги 2")],
+  books: [new Book("1", "Название книги 1"), new Book("2", "Название книги 2")],
 };
 
 router.get("/", (req, res) => {
@@ -25,18 +34,27 @@ router.get("/create", (req, res) => {
   });
 });
 
-router.get("/view/:id", (req, res) => {
+router.get("/view/:id", async (req, res) => {
   const { books } = store;
   const { id } = req.params;
   const idx = books.findIndex((el) => el.id === id);
   if (idx !== -1) {
     // console.log('YES found', id);
+    // Увеличиваем счетчик в redis
+    try {
+      const cnt = await client.incr(String(id));
+      // res.json({ massage: "Инкримент ID=" + id + " -----   cnt = " + cnt });
+      console.log("Инкримент ID=" + id + " -----   cnt = " + cnt);
+    } catch (e) {
+      // res.json({ errorcode: 500, errmassage: "error in radis", err: e });
+    }
+
     res.render("view", {
       title: "VIEW PAGE",
       item: books[idx],
     });
   } else {
-    console.log('NOT found', id);
+    console.log("NOT found", id);
     res.status(404);
     res.json({
       status: 404,
@@ -55,7 +73,7 @@ router.get("/update/:id", (req, res) => {
       item: books[idx],
     });
   } else {
-    console.log('NOT found', id);
+    console.log("NOT found", id);
     res.status(404);
     res.json({
       status: 404,
