@@ -40,10 +40,9 @@ router.get("/view/:id", async (req, res) => {
   const idx = books.findIndex((el) => el.id === id);
   let cnt = 0;
   if (idx !== -1) {
-    // Увеличиваем счетчик в redis
+    // Увеличиваем счетчик  в redis
     try {
       cnt = await client.incr(String(id));
-      console.log("Инкримент ID=" + id + " -----   cnt = " + cnt);
     } catch (e) {
       console.log(" Ошибка ", {
         errorcode: 500,

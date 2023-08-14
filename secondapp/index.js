@@ -7,7 +7,7 @@ app.use(express.json());
 app.use("/", indexRouter);
 app.use("/css", express.static(__dirname + "/css"));
 
-const serverPort = process.env.PORT || 3000;
+const serverPort = process.env.PORT || 4000;
 const PORT = serverPort;
 app.listen(PORT);
-console.log(`=== Основное приложение Express запущено на ${serverPort} порту ===`);
+console.log(`=== Второе приложение Express запущено на ${serverPort} порту ===`);
