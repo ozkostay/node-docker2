@@ -1,6 +1,4 @@
 # Logs
-public/books/*.*
-data/*.*
 logs
 *.log
 npm-debug.log*
