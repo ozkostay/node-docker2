@@ -38,20 +38,24 @@ router.get("/view/:id", async (req, res) => {
   const { books } = store;
   const { id } = req.params;
   const idx = books.findIndex((el) => el.id === id);
+  let cnt = 0;
   if (idx !== -1) {
-    // console.log('YES found', id);
     // Увеличиваем счетчик в redis
     try {
-      const cnt = await client.incr(String(id));
-      // res.json({ massage: "Инкримент ID=" + id + " -----   cnt = " + cnt });
+      cnt = await client.incr(String(id));
       console.log("Инкримент ID=" + id + " -----   cnt = " + cnt);
     } catch (e) {
-      // res.json({ errorcode: 500, errmassage: "error in radis", err: e });
+      console.log(" Ошибка ", {
+        errorcode: 500,
+        errmassage: "error in radis",
+        err: e,
+      });
     }
 
     res.render("view", {
       title: "VIEW PAGE",
       item: books[idx],
+      cnt: cnt,
     });
   } else {
     console.log("NOT found", id);
