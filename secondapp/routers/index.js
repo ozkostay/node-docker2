@@ -4,11 +4,11 @@ const router = express.Router();
 // const fileMulter = require("../middleware/file");
 // REDIS
 const redis = require("redis");
-// const REDIS_URL = process.env.REDIS_URL || "localhost";
+// const REDIS_URL = process.env.REDIS_URL || "redis://localhost";
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost";
 console.log('REDIS_URL', REDIS_URL);
 // const client = redis.createClient({ url: REDIS_URL });
-const client = redis.createClient();
+const client = redis.createClient({  url: REDIS_URL });
 
 (async () => {
   await client.connect();

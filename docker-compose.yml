@@ -16,3 +16,16 @@ services:
     command: npm run dev
     depends_on:
       - storage
+  secondapp:
+    image: node:15.6
+    volumes:
+      - ./secondapp:/app
+    working_dir: /app
+    environment:
+      - PORT=4000
+      - REDIS_URL=redis://storage
+    ports:
+      - 4000:4000
+    command: npm run dev
+    depends_on:
+      - storage
