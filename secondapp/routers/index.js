@@ -1,243 +1,85 @@
 const express = require("express");
 const router = express.Router();
-// const Book = require("../store/Book");
-// const fileMulter = require("../middleware/file");
+// Для работы с формами
+const bodyParser = require("body-parser");
+const urlebcodedparser = bodyParser.urlencoded({ extended: false });
+
 // REDIS
 const redis = require("redis");
-// const REDIS_URL = process.env.REDIS_URL || "redis://localhost";
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost";
-console.log('REDIS_URL', REDIS_URL);
-// const client = redis.createClient({ url: REDIS_URL });
-const client = redis.createClient({  url: REDIS_URL });
+console.log("REDIS_URL", REDIS_URL);
+const client = redis.createClient({ url: REDIS_URL });
 
 (async () => {
   await client.connect();
 })();
 
-// STORE
-// const store = {
-//   // для начала добавим 2 объекта книги
-//   books: [new Book("1", "Название книги 1"), new Book("2", "Название книги 2")],
-// };
-
 router.get("/", async (req, res) => {
-    try {
-      await client.hSet('myhash', 'id-1', 1);
-      await client.hSet('myhash', 'id-1', 2);
-      // let cnt1 = await client.hIncrby('myhash', 'id-1', '1');
-      // await client.hIncrBy('myhash', 'id-1', '1');
-      let cnt2 = await client.hSet('myhash', 'id-2', 3);
-      let all = await client.hGetAll('myhash');
-      // console.log(JSON.stringify(all, null, 2));
-      console.log(all, typeof(all));
-      console.log(' ========= ', await client.hGet('myhash', 'id-3'));
-
-    } catch (e) {
-      console.log(" Ошибка ", {
-        errorcode: 500,
-        errmassage: "error in radis",
-        err: e,
-      });
-    }
+  let allKeys = null;
+  try {
+    allKeys = await client.hKeys("viewCount");
+    console.log("allKeys", allKeys, typeof allKeys);
+  } catch (e) {
+    console.log(" Ошибка ", {
+      errorcode: 500,
+      errmassage: "error in radis",
+      err: e,
+    });
+  }
   res.render("index", {
-    title: "APP2 Main PAGE"
+    title: "APP2 Main PAGE",
+    allKeys: allKeys,
+    cnt: null,
   });
 });
 
-// router.get("/create", (req, res) => {
-//   // console.log('CREATE!!!');
-//   // ФОРМА Описываеи + кнопка закачки новой книги
-//   // По клику - router.post("/api/books/"
-//   res.render("create", {
-//     title: "CREATE PAGE",
-//     store: store.books,
-//   });
-// });
+router.get("/clear-redis", async (req, res) => {
+  console.log("ROUTE /clear-redis");
+  try {
+    await client.del("viewCount");
+  } catch (e) {
+    console.log(" Ошибка удаления в REDIS", {
+      errorcode: 500,
+      errmassage: "error in radis 2",
+      err: e,
+    });
+  }
+  res.status(201);
+  res.redirect("/");
+});
 
-// router.get("/view/:id", async (req, res) => {
-//   const { books } = store;
-//   const { id } = req.params;
-//   const idx = books.findIndex((el) => el.id === id);
-//   let cnt = 0;
-//   if (idx !== -1) {
-//     // Увеличиваем счетчик  в redis
-//     try {
-//       cnt = await client.incr(String(id));
-//     } catch (e) {
-//       console.log(" Ошибка ", {
-//         errorcode: 500,
-//         errmassage: "error in radis",
-//         err: e,
-//       });
-//     }
+router.post("/get-count", urlebcodedparser, async (req, res) => {
+  console.log("REQ", req.body);
+  console.log("REQ getvalue ===== ", req.body.getvalue);
+  console.log("REQ increment ===== ", req.body.increment);
+  const id = req.body.sel;
+  console.log("ID", id);
+  let cnt = null;
+  try {
+    if (req.body.getvalue === "1") {
+      cnt = await client.hGet("viewCount", id);
+    } else if (req.body.increment === "1") {
+      cnt = Number(await client.hGet("viewCount", String(id))) + 1;
+      await client.hSet("viewCount", String(id), cnt);
+    } else {
+      console.log("Третий вариант");
+    }
+    allKeys = await client.hKeys("viewCount");
+    console.log(`Всего ${cnt} просмотров`);
+  } catch (e) {
+    console.log(" Ошибка получения в REDIS", {
+      errorcode: 500,
+      errmassage: "error in radis 2",
+      err: e,
+    });
+  }
 
-//     res.render("view", {
-//       title: "VIEW PAGE",
-//       item: books[idx],
-//       cnt: cnt,
-//     });
-//   } else {
-//     console.log("NOT found", id);
-//     res.status(404);
-//     res.json({
-//       status: 404,
-//       errormsg: "404 | страница не найдена",
-//     });
-//   }
-// });
-
-// router.get("/update/:id", (req, res) => {
-//   const { books } = store;
-//   const { id } = req.params;
-//   const idx = books.findIndex((el) => el.id === id);
-//   if (idx !== -1) {
-//     res.render("update", {
-//       title: "UPDATE PAGE",
-//       item: books[idx],
-//     });
-//   } else {
-//     console.log("NOT found", id);
-//     res.status(404);
-//     res.json({
-//       status: 404,
-//       errormsg: "404 | страница не найдена",
-//     });
-//   }
-// });
-
-// router.get("/api/books", (req, res) => {
-//   // Главная страница
-//   const { books } = store;
-//   res.json(books);
-// });
-
-// router.post("/api/books/", fileMulter.single("fileBook"), (req, res) => {
-//   // console.log('ADD bok');
-//   // Непосредственно запись в STATE новой книги
-//   const { books } = store;
-//   const {
-//     id,
-//     title = "Название книги",
-//     description,
-//     authors,
-//     favorite,
-//     fileCover,
-//     fileName = req.file.originalname,
-//     fileBook = req.file.filename,
-//   } = req.body;
-
-//   const newBook = new Book(
-//     id,
-//     title,
-//     description,
-//     authors,
-//     favorite,
-//     fileCover,
-//     fileName,
-//     fileBook
-//   );
-
-//   books.push(newBook);
-//   res.status(201);
-//   res.redirect("/");
-// });
-
-// router.post("/api/user/login", (req, res) => {
-//   // в этом проекте не надо, но оставил. НЕТ В ЗАДАНИИ!!!
-//   const returnObject = { id: 1, mail: "test@mail.ru" };
-//   res.status(201);
-//   res.json(returnObject);
-// });
-
-// router.get("/api/books/:id", (req, res) => {
-//   // просмотр текущей книги
-//   const { books } = store;
-//   const { id } = req.params;
-//   const idx = books.findIndex((el) => el.id === id);
-
-//   if (idx !== -1) {
-//     res.json(books[idx]);
-//   } else {
-//     res.status(404);
-//     res.json({
-//       status: 404,
-//       errormsg: "404 | страница не найдена",
-//     });
-//   }
-// });
-
-// router.put("/api/books/:id", (req, res) => {
-//   // Редактирование книги. НЕ В ЭТОЙ ВЕРСИИ!!! в формах метода PUT не предусмотрено
-//   const { books } = store;
-//   const { title, desc } = req.body;
-//   const { id } = req.params;
-//   const idx = books.findIndex((el) => el.id === id);
-
-//   // Добавить поля
-//   if (idx !== -1) {
-//     books[idx] = {
-//       ...books[idx],
-//       title,
-//       description,
-//       authors,
-//       favorite,
-//       fileCover,
-//       fileName,
-//       fileBook,
-//     };
-
-//     res.json(books[idx]);
-//   } else {
-//     res.status(404);
-//     res.json({
-//       status: 404,
-//       errormsg: "404 | страница не найдена",
-//     });
-//   }
-// });
-
-// router.post("/api/books/delete/:id", (req, res) => {
-//   // Удаляем книгу
-//   const { books } = store;
-//   const { id } = req.params;
-//   const idx = books.findIndex((el) => el.id === id);
-//   if (idx !== -1) {
-//     books.splice(idx, 1);
-//     res.redirect("/");
-//   } else {
-//     res.status(404);
-//     res.json({
-//       status: 404,
-//       errormsg: "404 | страница не найдена",
-//     });
-//   }
-// });
-
-// router.get("/api/books/:id/download", (req, res) => {
-//   // Здесь не надо, но оставил, пригодится :-)
-//   const { books } = store;
-//   const { id } = req.params;
-//   const idx = books.findIndex((el) => el.id === id);
-//   if (idx > -1) {
-//     res.status(201);
-//     const path =
-//       __dirname.slice(0, __dirname.lastIndexOf("/routers")) +
-//       `/public/books/${books[idx].fileBook}`;
-//     res.download(path, books[idx].fileBook, (err) => {
-//       if (err) {
-//         res.status(404).json({
-//           status: 404,
-//           errormsg: `Нет файла с ID=${id}`,
-//         });
-//       }
-//     });
-//   } else {
-//     res.status(500);
-//     res.json({
-//       status: 500,
-//       errormsg: `Нет файла с ID=${id}`,
-//     });
-//   }
-// });
+  res.status(201);
+  res.render("index", {
+    title: "APP2 Main PAGE",
+    allKeys: allKeys,
+    cnt: cnt,
+  });
+});
 
 module.exports = router;

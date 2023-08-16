@@ -1,7 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const Book = require("../store/Book");
+// Для работы с файлами
 const fileMulter = require("../middleware/file");
+// Для работы с формами
+const bodyParser = require("body-parser");
+const urlebcodedparser = bodyParser.urlencoded({ extended: false });
 // REDIS
 const redis = require("redis");
 const REDIS_URL = process.env.REDIS_URL || "localhost";
@@ -22,6 +26,7 @@ router.get("/", (req, res) => {
     title: "Main PAGE",
     store: store.books,
   });
+  console.log("Библиотека ", store.books);
 });
 
 router.get("/create", (req, res) => {
@@ -42,7 +47,8 @@ router.get("/view/:id", async (req, res) => {
   if (idx !== -1) {
     // Увеличиваем счетчик  в redis
     try {
-      cnt = await client.incr(String(id));
+      cnt = Number(await client.hGet("viewCount", String(id))) + 1;
+      await client.hSet("viewCount", String(id), cnt);
     } catch (e) {
       console.log(" Ошибка ", {
         errorcode: 500,
@@ -91,36 +97,47 @@ router.get("/api/books", (req, res) => {
   res.json(books);
 });
 
-router.post("/api/books/", fileMulter.single("fileBook"), (req, res) => {
-  // console.log('ADD bok');
-  // Непосредственно запись в STATE новой книги
-  const { books } = store;
-  const {
-    id,
-    title = "Название книги",
-    description,
-    authors,
-    favorite,
-    fileCover,
-    fileName = req.file.originalname,
-    fileBook = req.file.filename,
-  } = req.body;
+router.post(
+  "/api/books/",
+  urlebcodedparser,
+  fileMulter.single("fileBook"),
+  (req, res) => {
+    // Непосредственно запись в STATE новой книги
+    const { books } = store;
+    console.log("=============== ID ========== ", req.body.id);
+    const {
+      id,
+      title = "Название книги",
+      description,
+      authors,
+      favorite,
+      fileCover,
+      fileName = req.file.originalname,
+      fileBook = req.file.filename,
+    } = req.body;
 
-  const newBook = new Book(
-    id,
-    title,
-    description,
-    authors,
-    favorite,
-    fileCover,
-    fileName,
-    fileBook
-  );
+    const newBook = new Book(
+      id,
+      title,
+      description,
+      authors,
+      favorite,
+      fileCover,
+      fileName,
+      fileBook
+    );
 
-  books.push(newBook);
-  res.status(201);
-  res.redirect("/");
-});
+    // Проверка - Редактирование или новая
+    const idx = books.findIndex((el) => el.id === newBook.id);
+    if (idx !== -1) {
+      books.splice(idx, 1); // Удаляем существующую
+    }
+
+    books.push(newBook);
+    res.status(201);
+    res.redirect("/");
+  }
+);
 
 router.post("/api/user/login", (req, res) => {
   // в этом проекте не надо, но оставил. НЕТ В ЗАДАНИИ!!!
