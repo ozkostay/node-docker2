@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const fetch = require('node-fetch');
 const Book = require("../store/Book");
 // Для работы с файлами
 const fileMulter = require("../middleware/file");
@@ -45,10 +46,27 @@ router.get("/view/:id", async (req, res) => {
   const idx = books.findIndex((el) => el.id === id);
   let cnt = 0;
   if (idx !== -1) {
-    // Увеличиваем счетчик  в redis
+    // Получаем текущее значение
     try {
-      cnt = Number(await client.hGet("viewCount", String(id))) + 1;
-      await client.hSet("viewCount", String(id), cnt);
+      const response = await fetch(`http://secondapp:4000/counter/${id}`);
+      const cntObj = await response.json(); // значение из RADIS
+      cnt = Number(cntObj[id]) + 1;
+    } catch (e) {
+      console.log(" Ошибка fetch ", {
+        errorcode: 500,
+        errmassage: "error in fetch",
+        err: e,
+      }
+    )};
+    // Увеличиваем на 1
+    try {
+      const body = { count: cnt};
+      const response = await fetch(`http://secondapp:4000/counter/${id}/incr`, {
+        method: 'post',
+        body: JSON.stringify(body),
+        headers: {'Content-Type': 'application/json'}  
+      });
+      const data = await response.json();
     } catch (e) {
       console.log(" Ошибка ", {
         errorcode: 500,
