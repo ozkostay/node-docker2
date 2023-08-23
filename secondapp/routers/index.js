@@ -24,7 +24,8 @@ router.get("/counter/:bookId", async (req, res) => {
   let cnt = null;
   try {
     cnt = Number(await client.hGet("viewCount", String(bookId)));
-    cnt = !cnt ? 0 : cnt;
+    cnt = !cnt ? 1 : cnt + 1;
+
   } catch (e) {
     console.log(" Ошибка ", {
       errorcode: 500,
@@ -33,6 +34,7 @@ router.get("/counter/:bookId", async (req, res) => {
     });
   }
   
+  console.log('555', cnt);
   res.status(200);
   res.json({ [bookId]: cnt });
 });

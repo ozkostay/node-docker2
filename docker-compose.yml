@@ -11,6 +11,7 @@ services:
     environment:
       - PORT=3000
       - REDIS_URL=redis://storage
+      - SECONDAPP_URL=http://secondapp:4000/counter
     ports:
       - 3000:3000
     command: npm run dev

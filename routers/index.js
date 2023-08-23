@@ -10,6 +10,7 @@ const urlebcodedparser = bodyParser.urlencoded({ extended: false });
 // REDIS
 const redis = require("redis");
 const REDIS_URL = process.env.REDIS_URL || "localhost";
+SECONDAPP_URL = process.env.SECONDAPP_URL;
 const client = redis.createClient({ url: REDIS_URL });
 
 (async () => {
@@ -47,10 +48,12 @@ router.get("/view/:id", async (req, res) => {
   let cnt = 0;
   if (idx !== -1) {
     // Получаем текущее значение
+    console.log(`999 ${SECONDAPP_URL}/${id}`);
     try {
-      const response = await fetch(`http://secondapp:4000/counter/${id}`);
+      const response = await fetch(`${SECONDAPP_URL}/${id}`);
       const cntObj = await response.json(); // значение из RADIS
-      cnt = Number(cntObj[id]) + 1;
+      console.log('222', cntObj, typeof cntObj);
+      cnt = Number(cntObj[id]);
     } catch (e) {
       console.log(" Ошибка fetch ", {
         errorcode: 500,
@@ -60,15 +63,16 @@ router.get("/view/:id", async (req, res) => {
     )};
     // Увеличиваем на 1
     try {
-      const body = { count: cnt};
-      const response = await fetch(`http://secondapp:4000/counter/${id}/incr`, {
+      console.log(`777 ${SECONDAPP_URL}/${id}/incr`);
+      const body = { count: cnt };
+      const response = await fetch(`${SECONDAPP_URL}/${id}/incr`, {
         method: 'post',
         body: JSON.stringify(body),
         headers: {'Content-Type': 'application/json'}  
       });
       const data = await response.json();
     } catch (e) {
-      console.log(" Ошибка ", {
+      console.log(" Ошибка post", {
         errorcode: 500,
         errmassage: "error in radis",
         err: e,
